@@ -219,16 +219,16 @@ to quickly create a Cobra application.`,
 				fmt.Println("TODO: error handling here")
 				panic(err)
 			}
-			var secret Secret
+			// var secret Secret
 			fmt.Println(secretValue)
 			fmt.Printf("%T\n", secretValue)
-			json.Unmarshal(secretValue, &secret)
+			// json.Unmarshal(secretValue, &secret)
 			// fmt.Println(secretValue)
 			// fmt.Println(string(secretValue))
 			// fmt.Println(secret.Value)
 			// fmt.Printf("%T\n", secret.Value)
 			filePath := directory + "/" + secretPath
-			e := encrypt(secret.Value, keystring)
+			e := encrypt(string(secretValue), keystring)
 			// fmt.Println(e)
 			fmt.Println("writing to " + filePath)
 			createDirFor(filePath)
