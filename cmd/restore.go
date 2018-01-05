@@ -37,7 +37,7 @@ to quickly create a Cobra application.`,
 		hostname	:= "54.245.74.53"
 		username	:= "admin"
 		password	:= "thisismypassword"
-		// keystring := "ThisIsAMagicKeyString12345667890"
+		keystring := "ThisIsAMagicKeyString12345667890"
 		directory := "temp"
 
 		cluster, err := NewCluster(hostname, username, password)
@@ -55,6 +55,32 @@ to quickly create a Cobra application.`,
 		}
 		secrets := strings.Split(string(secretList), "\n")
 		fmt.Println(secrets)
+		for _, secretPath := range secrets {
+			// fmt.Println(index)
+			filePath := directory + "/" + secretPath
+			fmt.Println(filePath)
+
+			secret, err := readFromFile(filePath)
+			if err != nil {
+				fmt.Println("TODO: error handling here")
+				panic(err)
+			}
+			plaintext := decrypt(string(secret), keystring)
+			// fmt.Println(plaintext)
+
+			fmt.Println("Starting put")
+			secretUrlPath := "/secrets/v1/secret/default/" + secretPath + "-new"
+			fmt.Println(secretUrlPath)
+			body, err := cluster.Put(secretUrlPath, []byte(plaintext))
+			fmt.Println("Ending put")
+			if err != nil {
+				fmt.Println("PUT failed")
+				panic(err)
+			}
+			fmt.Println(string(body))
+
+
+		}
 
 	},
 }
