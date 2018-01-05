@@ -68,18 +68,24 @@ to quickly create a Cobra application.`,
 			plaintext := decrypt(string(secret), keystring)
 			// fmt.Println(plaintext)
 
-			fmt.Println("Starting put")
+			// fmt.Println("Starting put")
 			secretUrlPath := "/secrets/v1/secret/default/" + secretPath + "-new"
 			fmt.Println(secretUrlPath)
-			body, err := cluster.Put(secretUrlPath, []byte(plaintext))
-			fmt.Println("Ending put")
+			fmt.Println("PUT")
+			body, statusCode, err := cluster.Put(secretUrlPath, []byte(plaintext))
+			// fmt.Println("Ending put")
 			if err != nil {
 				fmt.Println("PUT failed")
 				panic(err)
 			}
 			fmt.Println(string(body))
-
-
+			if statusCode != 201 {
+				fmt.Println("PATCH")
+				body, statusCode, err := cluster.Patch(secretUrlPath, []byte(plaintext))
+				fmt.Println(string(body))
+				fmt.Println(string(statusCode))
+				fmt.Println(err)
+			}
 		}
 
 	},

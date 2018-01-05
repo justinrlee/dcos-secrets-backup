@@ -119,7 +119,7 @@ func (c *Cluster) Get(path string) (body []byte, err error) {
 	return body, nil
 }
 
-func (c *Cluster) Post(path string, buf []byte) (body []byte, err error) {
+func (c *Cluster) PCall(path string, buf []byte) (body []byte, returnCode int, err error) {
 	url := c.cluster_url + path
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
@@ -128,14 +128,14 @@ func (c *Cluster) Post(path string, buf []byte) (body []byte, err error) {
 	resp, err	:= c.client.Do(req)
 
 	if err != nil {
-		fmt.Println("TODO: error handling here")
-		return nil, err
+		fmt.Println("TODO: error handling here1")
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("TODO: error handling here")
-		return nil, err
+		fmt.Println("TODO: error handling here2")
+		return nil, resp.StatusCode, err
 	}
 
 	body, _ = ioutil.ReadAll(resp.Body)
@@ -144,10 +144,40 @@ func (c *Cluster) Post(path string, buf []byte) (body []byte, err error) {
 	fmt.Println(c.user)
 	// fmt.Println(body)
 
-	return body, nil
+	return body, resp.StatusCode, nil
 }
 
-func (c *Cluster) Put(path string, buf []byte) (body []byte, err error) {
+func (c *Cluster) Patch(path string, buf []byte) (body []byte, returnCode int, err error) {
+	url := c.cluster_url + path
+	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "token=" + string(c.user.Token))
+
+	resp, err	:= c.client.Do(req)
+
+	if err != nil {
+		fmt.Println("TODO: error handling here3")
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("TODO: error handling here6")
+		fmt.Println(resp.StatusCode)
+		fmt.Println(resp)
+		return nil, resp.StatusCode, err
+	}
+
+	body, _ = ioutil.ReadAll(resp.Body)
+
+	err = json.Unmarshal(body, &c.user)
+	fmt.Println(c.user)
+	// fmt.Println(body)
+
+	return body, resp.StatusCode, nil
+}
+
+func (c *Cluster) Put(path string, buf []byte) (body []byte, returnCode int, err error) {
 	url := c.cluster_url + path
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
@@ -156,16 +186,16 @@ func (c *Cluster) Put(path string, buf []byte) (body []byte, err error) {
 	resp, err	:= c.client.Do(req)
 
 	if err != nil {
-		fmt.Println("TODO: error handling here")
-		return nil, err
+		fmt.Println("TODO: error handling here5")
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("TODO: error handling here")
+		fmt.Println("TODO: error handling here6")
 		fmt.Println(resp.StatusCode)
 		fmt.Println(resp)
-		return nil, err
+		return nil, resp.StatusCode, err
 	}
 
 	body, _ = ioutil.ReadAll(resp.Body)
@@ -174,5 +204,5 @@ func (c *Cluster) Put(path string, buf []byte) (body []byte, err error) {
 	fmt.Println(c.user)
 	// fmt.Println(body)
 
-	return body, nil
+	return body, resp.StatusCode, nil
 }
