@@ -69,7 +69,7 @@ to quickly create a Cobra application.`,
 			// fmt.Println(plaintext)
 
 			// fmt.Println("Starting put")
-			secretUrlPath := "/secrets/v1/secret/default/" + secretPath + "-new"
+			// secretUrlPath := "/secrets/v1/secret/default/" + secretPath + "-new"
 			fmt.Println(secretUrlPath)
 			fmt.Println("PUT")
 			body, statusCode, err := cluster.Put(secretUrlPath, []byte(plaintext))
