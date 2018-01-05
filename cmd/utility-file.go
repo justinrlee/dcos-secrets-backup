@@ -12,6 +12,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"archive/tar"
+	"bytes"
+	// "log"
 )
 
 func decrypt(cipherstring string, keystring string) string {
@@ -100,8 +104,90 @@ func readFromFile(file string) ([]byte, error) {
 	return data, err
 }
 
+func writeTar(files []File, filename string){
+	f, err := os.Create(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	// Create a new tar archive.
+	tw := tar.NewWriter(f)
+
+	for _, file := range files {
+		hdr := &tar.Header{
+			Name: file.Path,
+			Mode: 0600,
+			Size: int64(len(file.Body)),
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
+			fmt.Println("Error writing header")
+			// log.Fatalln(err)
+		}
+		if _, err := tw.Write([]byte(file.Body)); err != nil {
+			fmt.Println("Error writing content")
+			// log.Fatalln(err)
+		}
+	}
+	// Make sure to check the error on Close.
+	if err := tw.Close(); err != nil {
+		fmt.Println("Error closing")
+		// log.Fatalln(err)
+	}
+}
+
+func readTar(filename string) (files []File){
+	files = []File{}
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	tr := tar.NewReader(f)
+
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			// end of tar archive
+			break
+		}
+		if err != nil {
+			fmt.Println("Error advancing")
+			// log.Fatalln(err)
+		}
+		// fmt.Printf("Contents of %s:\n", hdr.Name)
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(tr)
+		s := buf.String()
+		files = append(files, File{Path: hdr.Name, Body: s})
+		// files = append(files, File{Path: secretPath, Body: e})
+		// fmt.Println(s)
+		// i, err := tr.Read()
+		// if err != nil {
+		// 	fmt.Println("Error reading")
+		// }
+		// fmt.Println("Read %s bytes\n", i)
+		// if _, err := io.Copy(os.Stdout, tr); err != nil {
+		// 	log.Fatalln(err)
+		// }
+		// fmt.Println()
+	}
+	return files
+}
+
 func createDirFor(path string) {
 	dir := filepath.Dir(path)
 	// fmt.Println(dir)
 	os.MkdirAll(dir, os.ModePerm)
+}
+
+func validateCipher() {
+	if cipherkey == "" {
+		cipherkey = "ThisIsAMagicKeyString12345667890"
+	} else if len(cipherkey)%32 != 0 {
+		fmt.Printf("'cipherkey' has a length of %d characters\n", len(cipherkey))
+		fmt.Println("It must be a multiple of 32 characters long")
+		os.Exit(1)
+	}
 }

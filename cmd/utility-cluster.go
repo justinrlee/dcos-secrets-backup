@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"bytes"
+	"errors"
 )
 
 type User struct{
@@ -29,6 +30,10 @@ type Secret struct{
 	Value string `json:value` // Cannot unmarshal to []byte
 }
 
+type File struct {
+	Path, Body string
+}
+
 func createClient() *http.Client {
 	// // Create transport to skip verify TODO: add certificate verification
 	tr := &http.Transport{
@@ -43,6 +48,10 @@ func createClient() *http.Client {
 }
 
 func NewCluster(hostname string, username string, password string) (cluster *Cluster, err error) {
+	if (hostname == "" || username == "" || password == "") {
+		fmt.Println("Please provide hostname, username, and password")
+		return nil, errors.New("")
+	}
 	var c Cluster
 	c.cluster_url	= "https://" + hostname
 	c.user = User{Username: username, Password: password}
@@ -50,7 +59,7 @@ func NewCluster(hostname string, username string, password string) (cluster *Clu
 	// Create JSON to login
 	j, err := json.Marshal(c.user)
 	if err != nil {
-		fmt.Println("TODO: error handling here")
+		fmt.Println("TODO: error handling here utility-cluster NewCluster")
 		return nil, err
 	}
 
@@ -65,7 +74,7 @@ func NewCluster(hostname string, username string, password string) (cluster *Clu
 }
 
 func (c *Cluster) Login(path string, buf []byte) (err error) {
-	fmt.Println("Logging in to cluster.")
+	fmt.Printf("Logging into cluster [%s]\n", c.cluster_url)
 	url := c.cluster_url + path
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
@@ -73,17 +82,21 @@ func (c *Cluster) Login(path string, buf []byte) (err error) {
 	resp, err	:= c.client.Do(req)
 
 	if err != nil {
-		fmt.Println("TODO: error handling here")
+		fmt.Println("TODO: error handling here utility-cluster Login1")
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("TODO: error handling here")
-		return err
+		fmt.Println("Unable to login (Invalid credentials?)")
+		return errors.New("Unable to login (Invalid credentials?)")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("TODO: error handling here utility-cluster Login3")
+		return err
+	}
 
 	// Will add token to user
 	err = json.Unmarshal(body, &c.user)
@@ -119,32 +132,26 @@ func (c *Cluster) Get(path string) (body []byte, err error) {
 	return body, nil
 }
 
-func (c *Cluster) PCall(path string, buf []byte) (body []byte, returnCode int, err error) {
+// func (c *Cluster) PCall(path string, verb string, buf []byte,
+// 		acceptedReturnCodes map[int]bool) (body []byte, returnCode int, err error) {
+
+func (c *Cluster) PCall(path string, verb string, buf []byte) (body []byte, returnCode int, err error) {
 	url := c.cluster_url + path
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(buf))
+	req, err := http.NewRequest(verb, url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "token=" + string(c.user.Token))
 
 	resp, err	:= c.client.Do(req)
 
 	if err != nil {
-		fmt.Println("TODO: error handling here1")
+		fmt.Println("TODO: error handling here: request failed")
 		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("TODO: error handling here2")
-		return nil, resp.StatusCode, err
-	}
+	body, err = ioutil.ReadAll(resp.Body)
 
-	body, _ = ioutil.ReadAll(resp.Body)
-
-	err = json.Unmarshal(body, &c.user)
-	fmt.Println(c.user)
-	// fmt.Println(body)
-
-	return body, resp.StatusCode, nil
+	return body, resp.StatusCode, err
 }
 
 func (c *Cluster) Patch(path string, buf []byte) (body []byte, returnCode int, err error) {

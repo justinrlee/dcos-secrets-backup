@@ -24,6 +24,12 @@ import (
 )
 
 var cfgFile string
+var hostname string
+var username string
+var password string
+var cipherkey string
+var destfile string
+var sourcefile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -48,7 +54,13 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dcos-secrets-backup.yaml)")
+	rootCmd.PersistentFlags().StringVar(&hostname, "hostname", "", "Hostname of cluster")
+	rootCmd.PersistentFlags().StringVar(&username, "username", "", "username for cluster")
+	rootCmd.PersistentFlags().StringVar(&password, "password", "", "password for cluster")
+	rootCmd.PersistentFlags().StringVar(&cipherkey, "cipherkey", "", "cipherkey for encryption/decryption")
+	rootCmd.PersistentFlags().StringVar(&destfile, "destfile", "secrets.tar", "Filename to write tar of secrets")
+	rootCmd.PersistentFlags().StringVar(&sourcefile, "sourcefile", "secrets.tar", "Filename to read tar of secrets")
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dcos-secrets-backup.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
