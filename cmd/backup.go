@@ -46,7 +46,7 @@ to quickly create a Cobra application.`,
 		b, err := cluster.Get("/secrets/v1/secret/default/?list=true")
 		if err != nil {
 			fmt.Println("Unable to obtain list of secrets")
-			os.exit(1)
+			os.Exit(1)
 		}
 
 		var secrets struct{
@@ -55,7 +55,7 @@ to quickly create a Cobra application.`,
 
 		json.Unmarshal(b, &secrets)
 
-		files := []File {}
+		files := []Secret {}
 
 		// Get all secrets, add them to the files array
 		for _, secretPath := range secrets.Array {
@@ -67,7 +67,7 @@ to quickly create a Cobra application.`,
 			}
 
 			e := encrypt(string(secretValue), cipherkey)
-			files = append(files, File{Path: secretPath, Body: e})
+			files = append(files, Secret{ID: secretPath, EncryptedJSON: e})
 		}
 
 		fmt.Println("Writing to tar at " + destfile)

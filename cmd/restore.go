@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	// "strings"
 
 	"github.com/spf13/cobra"
 )
@@ -43,16 +42,16 @@ to quickly create a Cobra application.`,
 
 		files := readTar(sourcefile)
 		for _, item := range files {
-			plaintext := decrypt(item.Body, cipherkey)
-			fmt.Printf("Processing [%s] ...\n", item.Path)
-			secretPath := "/secrets/v1/secret/default/" + item.Path
-			resp, code, err := cluster.PCall(secretPath, "PUT", []byte(plaintext))
+			plaintext := decrypt(item.EncryptedJSON, cipherkey)
+			fmt.Printf("Processing [%s] ...\n", item.ID)
+			secretPath := "/secrets/v1/secret/default/" + item.ID
+			resp, code, err := cluster.Call("PUT", secretPath, []byte(plaintext))
 			if code == 201 {
-				fmt.Println("Secret" + item.Path + "successfully created.")
+				fmt.Println("Secret" + item.ID + "successfully created.")
 			} else if code == 409 {
-				presp, pcode, perr := cluster.PCall(secretPath, "PATCH", []byte(plaintext))
+				presp, pcode, perr := cluster.Call("PATCH", secretPath, []byte(plaintext))
 				if pcode == 204 {
-					fmt.Println("Secret [" + item.Path + "] successfully updated.")
+					fmt.Println("Secret [" + item.ID + "] successfully updated.")
 				} else if perr != nil {
 					fmt.Println("Error:")
 					fmt.Println(perr)

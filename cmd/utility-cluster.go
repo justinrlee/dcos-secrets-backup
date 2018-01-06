@@ -22,12 +22,11 @@ type Cluster struct{
 	user User
 }
 
-type Secret struct{
-	Value string `json:value` // Cannot unmarshal to []byte
-}
-
-type File struct {
-	Path, Body string
+// File >> Secret
+type Secret struct {
+	ID, EncryptedJSON string
+	// Path >> ID
+	// Body > EncryptedJSON
 }
 
 func createClient() *http.Client {
@@ -128,10 +127,8 @@ func (c *Cluster) Get(path string) (body []byte, err error) {
 	return body, nil
 }
 
-// func (c *Cluster) PCall(path string, verb string, buf []byte,
-// 		acceptedReturnCodes map[int]bool) (body []byte, returnCode int, err error) {
-
-func (c *Cluster) PCall(path string, verb string, buf []byte) (body []byte, returnCode int, err error) {
+// Basic wrapper that includes specifying the auth token
+func (c *Cluster) Call(verb string, path string, buf []byte) (body []byte, returnCode int, err error) {
 	url := c.cluster_url + path
 	req, err := http.NewRequest(verb, url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
@@ -150,62 +147,62 @@ func (c *Cluster) PCall(path string, verb string, buf []byte) (body []byte, retu
 	return body, resp.StatusCode, err
 }
 
-func (c *Cluster) Patch(path string, buf []byte) (body []byte, returnCode int, err error) {
-	url := c.cluster_url + path
-	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(buf))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "token=" + string(c.user.Token))
+// func (c *Cluster) Patch(path string, buf []byte) (body []byte, returnCode int, err error) {
+// 	url := c.cluster_url + path
+// 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(buf))
+// 	req.Header.Set("Content-Type", "application/json")
+// 	req.Header.Set("Authorization", "token=" + string(c.user.Token))
 
-	resp, err	:= c.client.Do(req)
+// 	resp, err	:= c.client.Do(req)
 
-	if err != nil {
-		fmt.Println("TODO: error handling here3")
-		return nil, 0, err
-	}
-	defer resp.Body.Close()
+// 	if err != nil {
+// 		fmt.Println("TODO: error handling here3")
+// 		return nil, 0, err
+// 	}
+// 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("TODO: error handling here6")
-		fmt.Println(resp.StatusCode)
-		fmt.Println(resp)
-		return nil, resp.StatusCode, err
-	}
+// 	if resp.StatusCode != http.StatusOK {
+// 		fmt.Println("TODO: error handling here6")
+// 		fmt.Println(resp.StatusCode)
+// 		fmt.Println(resp)
+// 		return nil, resp.StatusCode, err
+// 	}
 
-	body, _ = ioutil.ReadAll(resp.Body)
+// 	body, _ = ioutil.ReadAll(resp.Body)
 
-	err = json.Unmarshal(body, &c.user)
-	fmt.Println(c.user)
-	// fmt.Println(body)
+// 	err = json.Unmarshal(body, &c.user)
+// 	fmt.Println(c.user)
+// 	// fmt.Println(body)
 
-	return body, resp.StatusCode, nil
-}
+// 	return body, resp.StatusCode, nil
+// }
 
-func (c *Cluster) Put(path string, buf []byte) (body []byte, returnCode int, err error) {
-	url := c.cluster_url + path
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(buf))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "token=" + string(c.user.Token))
+// func (c *Cluster) Put(path string, buf []byte) (body []byte, returnCode int, err error) {
+// 	url := c.cluster_url + path
+// 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(buf))
+// 	req.Header.Set("Content-Type", "application/json")
+// 	req.Header.Set("Authorization", "token=" + string(c.user.Token))
 
-	resp, err	:= c.client.Do(req)
+// 	resp, err	:= c.client.Do(req)
 
-	if err != nil {
-		fmt.Println("TODO: error handling here5")
-		return nil, 0, err
-	}
-	defer resp.Body.Close()
+// 	if err != nil {
+// 		fmt.Println("TODO: error handling here5")
+// 		return nil, 0, err
+// 	}
+// 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("TODO: error handling here6")
-		fmt.Println(resp.StatusCode)
-		fmt.Println(resp)
-		return nil, resp.StatusCode, err
-	}
+// 	if resp.StatusCode != http.StatusOK {
+// 		fmt.Println("TODO: error handling here6")
+// 		fmt.Println(resp.StatusCode)
+// 		fmt.Println(resp)
+// 		return nil, resp.StatusCode, err
+// 	}
 
-	body, _ = ioutil.ReadAll(resp.Body)
+// 	body, _ = ioutil.ReadAll(resp.Body)
 
-	err = json.Unmarshal(body, &c.user)
-	fmt.Println(c.user)
-	// fmt.Println(body)
+// 	err = json.Unmarshal(body, &c.user)
+// 	fmt.Println(c.user)
+// 	// fmt.Println(body)
 
-	return body, resp.StatusCode, nil
-}
+// 	return body, resp.StatusCode, nil
+// }

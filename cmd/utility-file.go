@@ -3,19 +3,17 @@
 package cmd
 
 import (
-	// "bufio"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+
 	"fmt"
 	"io"
-	// "io/ioutil"
 	"os"
 	"path/filepath"
 
 	"archive/tar"
 	"bytes"
-	// "log"
 )
 
 func decrypt(cipherstring string, keystring string) string {
@@ -105,7 +103,7 @@ func encrypt(plainstring, keystring string) string {
 // 	return data, err
 // }
 
-func writeTar(files []File, filename string){
+func writeTar(files []Secret, filename string){
 	f, err := os.Create(filename)
 	if err != nil {
 		panic(err)
@@ -117,15 +115,15 @@ func writeTar(files []File, filename string){
 
 	for _, file := range files {
 		hdr := &tar.Header{
-			Name: file.Path,
+			Name: file.ID,
 			Mode: 0600,
-			Size: int64(len(file.Body)),
+			Size: int64(len(file.EncryptedJSON)),
 		}
 		if err := tw.WriteHeader(hdr); err != nil {
 			fmt.Println("Error writing header")
 			// log.Fatalln(err)
 		}
-		if _, err := tw.Write([]byte(file.Body)); err != nil {
+		if _, err := tw.Write([]byte(file.EncryptedJSON)); err != nil {
 			fmt.Println("Error writing content")
 			// log.Fatalln(err)
 		}
@@ -137,8 +135,8 @@ func writeTar(files []File, filename string){
 	}
 }
 
-func readTar(filename string) (files []File){
-	files = []File{}
+func readTar(filename string) (files []Secret){
+	files = []Secret{}
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -157,11 +155,10 @@ func readTar(filename string) (files []File){
 			fmt.Println("Error advancing")
 			// log.Fatalln(err)
 		}
-		// fmt.Printf("Contents of %s:\n", hdr.Name)
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(tr)
 		s := buf.String()
-		files = append(files, File{Path: hdr.Name, Body: s})
+		files = append(files, Secret{ID: hdr.Name, EncryptedJSON: s})
 	}
 	return files
 }
