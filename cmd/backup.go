@@ -18,14 +18,10 @@ import (
 	"fmt"
 	"os"
 	"encoding/json"
-	// "strings"
 
 	"github.com/spf13/cobra"
 )
 
-// User
-
-// func jsonPost (url string, )
 
 // backupCmd represents the backup command
 var backupCmd = &cobra.Command{
@@ -41,40 +37,27 @@ to quickly create a Cobra application.`,
 		// fmt.Println("backup called")
 		validateCipher()
 
-		// Hardcoded for testing
-		// hostname	:= "54.245.74.53"
-		// fmt.Println(hostname)
-		// username	:= "admin"
-		// password	:= "thisismypassword"
-		// cipherkey := "ThisIsAMagicKeyString12345667890"
-		// directory := "temp"
-		// destfile := "out.tar"
-		// cluster_url	:= "https://" + cluster
-
 		cluster, err := NewCluster(hostname, username, password)
 		if err != nil {
 			fmt.Println("Unable to connect to cluster")
 			os.Exit(1)
 		}
-		// fmt.Println(cluster)
 
 		b, err := cluster.Get("/secrets/v1/secret/default/?list=true")
-		// fmt.Println("b")
-		// fmt.Println(string(b))
+		if err != nil {
+			fmt.Println("Unable to obtain list of secrets")
+			os.exit(1)
+		}
 
-		var secrets SecretList
+		var secrets struct{
+			Array []string `json:array`
+		}
 
 		json.Unmarshal(b, &secrets)
-		// fmt.Println("secrets")
-		// fmt.Println(secrets.Array)
 
 		files := []File {}
-		// 	File{
-		// 		Path: "secrets.list",
-		// 		Body: strings.Join(secrets.Array, "\n"),
-		// 	},
-		// }
 
+		// Get all secrets, add them to the files array
 		for _, secretPath := range secrets.Array {
 			fmt.Printf("Getting secret '%s'\n", secretPath)
 			secretValue, err := cluster.Get("/secrets/v1/secret/default/" + secretPath)
@@ -83,29 +66,10 @@ to quickly create a Cobra application.`,
 				panic(err)
 			}
 
-			// filePath := directory + "/" + secretPath
 			e := encrypt(string(secretValue), cipherkey)
-			// var secret Secret
-			// fmt.Println(secretValue)
-			// fmt.Printf("%T\n", secretValue)
-			// json.Unmarshal(secretValue, &secret)
-			// fmt.Println(secretValue)
-			// fmt.Println(string(secretValue))
-			// fmt.Println(secret.Value)
-			// fmt.Printf("%T\n", secret.Value)
 			files = append(files, File{Path: secretPath, Body: e})
-
-			// fmt.Println(e)
-			// fmt.Println("writing to " + filePath)
-			// createDirFor(filePath)
-			// writeToFile(e, filePath)
 		}
-		// fmt.Println(files)
 
-		// list := strings.Join(secrets.Array, "\n")
-		// // fmt.Println(list)
-		// // fmt.Println(directory + "/secrets.list")
-		// writeToFile(list, directory + "/secrets.list")
 		fmt.Println("Writing to tar at " + destfile)
 		writeTar(files, destfile)
 

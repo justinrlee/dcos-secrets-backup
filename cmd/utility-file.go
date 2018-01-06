@@ -3,13 +3,13 @@
 package cmd
 
 import (
-	"bufio"
+	// "bufio"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"fmt"
 	"io"
-	"io/ioutil"
+	// "io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -86,23 +86,24 @@ func encrypt(plainstring, keystring string) string {
 	return string(ciphertext)
 }
 
-func readline() string {
-	bio := bufio.NewReader(os.Stdin)
-	line, _, err := bio.ReadLine()
-	if err != nil {
-		fmt.Println(err)
-	}
-	return string(line)
-}
+// Unused, for now.
+// func readline() string {
+// 	bio := bufio.NewReader(os.Stdin)
+// 	line, _, err := bio.ReadLine()
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	return string(line)
+// }
+// 
+// func writeToFile(data, file string) {
+// 	ioutil.WriteFile(file, []byte(data), 777)
+// }
 
-func writeToFile(data, file string) {
-	ioutil.WriteFile(file, []byte(data), 777)
-}
-
-func readFromFile(file string) ([]byte, error) {
-	data, err := ioutil.ReadFile(file)
-	return data, err
-}
+// func readFromFile(file string) ([]byte, error) {
+// 	data, err := ioutil.ReadFile(file)
+// 	return data, err
+// }
 
 func writeTar(files []File, filename string){
 	f, err := os.Create(filename)
@@ -161,17 +162,6 @@ func readTar(filename string) (files []File){
 		buf.ReadFrom(tr)
 		s := buf.String()
 		files = append(files, File{Path: hdr.Name, Body: s})
-		// files = append(files, File{Path: secretPath, Body: e})
-		// fmt.Println(s)
-		// i, err := tr.Read()
-		// if err != nil {
-		// 	fmt.Println("Error reading")
-		// }
-		// fmt.Println("Read %s bytes\n", i)
-		// if _, err := io.Copy(os.Stdout, tr); err != nil {
-		// 	log.Fatalln(err)
-		// }
-		// fmt.Println()
 	}
 	return files
 }

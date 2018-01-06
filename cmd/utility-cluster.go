@@ -22,10 +22,6 @@ type Cluster struct{
 	user User
 }
 
-type SecretList struct{
-	Array []string `json:array`
-}
-
 type Secret struct{
 	Value string `json:value` // Cannot unmarshal to []byte
 }
