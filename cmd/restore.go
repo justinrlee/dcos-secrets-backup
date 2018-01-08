@@ -64,7 +64,7 @@ to quickly create a Cobra application.`,
 
 			resp, code, err := cluster.Call("PUT", secretPath, []byte(plaintext))
 			if code == 201 {
-				fmt.Println("Secret" + item.ID + "successfully created.")
+				fmt.Println("Secret [" + item.ID + "] successfully created.")
 			} else if code == 409 {
 				presp, pcode, perr := cluster.Call("PATCH", secretPath, []byte(plaintext))
 				if pcode == 204 {

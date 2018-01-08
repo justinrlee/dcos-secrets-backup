@@ -117,3 +117,44 @@ func (c *Cluster) Call(verb string, path string, buf []byte) (body []byte, retur
 
 	return body, resp.StatusCode, err
 }
+
+// Get secret
+func (c *Cluster) GetSecret(secretID string, cipherKey string, secretChan chan<- Secret, queue chan int) {
+		<- queue // Wait for there to be an open spot in the queue
+		fmt.Printf("Getting secret '%s'\n", secretID)
+		secretJSON, returnCode, err := c.Call("GET", "/secrets/v1/secret/default/"+secretID, nil)
+		if err != nil || returnCode != http.StatusOK {
+			fmt.Println("Unable to retrieve secret '%s'\n. [%d]: %s", secretID, returnCode, err.Error)
+			secretChan <- Secret{ID: "", EncryptedJSON: ""}
+			queue <- 0 // Release queue spot
+		} else {
+			e := encrypt(string(secretJSON), cipherKey)
+			secretChan <- Secret{ID: secretID, EncryptedJSON: e}
+			queue <- 0 // Release queue spot
+		}
+}
+
+func (c *Cluster) GetSecrets(secrets []string, cipherKey string, secretChan chan Secret, qsize int) {
+	queue := make(chan int, qsize)
+	for i:= 0; i < qsize; i++ {
+		// fmt.Println("Writing 0 to queue")
+		queue <- 0
+	}
+	// Spins off a bunch of goroutines to get secrets and add them to secretChan.  Should be rate limited by qsize
+	for _, secretID := range secrets {
+		go c.GetSecret(secretID, cipherKey, secretChan, queue)
+	}
+}
+
+// for _, secretID := range secrets.Array {
+// 	fmt.Printf("Getting secret '%s'\n", secretID)
+// 	// secretValue, err := cluster.Get("/secrets/v1/secret/default/" + secretPath)
+// 	secretJSON, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/"+secretID, nil)
+// 	if err != nil || returnCode != http.StatusOK {
+// 		fmt.Println("TODO: error handling here")
+// 		panic(err)
+// 	}
+
+// 	e := encrypt(string(secretJSON), cipherkey)
+// 	secretSlice = append(secretSlice, Secret{ID: secretID, EncryptedJSON: e})
+// }

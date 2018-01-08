@@ -61,19 +61,34 @@ to quickly create a Cobra application.`,
 
 		secretSlice := []Secret{}
 
-		// Get all secrets, add them to the files array
-		for _, secretID := range secrets.Array {
-			fmt.Printf("Getting secret '%s'\n", secretID)
-			// secretValue, err := cluster.Get("/secrets/v1/secret/default/" + secretPath)
-			secretJSON, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/"+secretID, nil)
-			if err != nil || returnCode != http.StatusOK {
-				fmt.Println("TODO: error handling here")
-				panic(err)
-			}
+		secretChan := make(chan Secret)
 
-			e := encrypt(string(secretJSON), cipherkey)
-			secretSlice = append(secretSlice, Secret{ID: secretID, EncryptedJSON: e})
+		// fmt.Println("Calling go GetSecrets")
+		go cluster.GetSecrets(secrets.Array, cipherkey, secretChan, 10)
+
+		// fmt.Println("Starting to receive")
+		for i := 0; i < len(secrets.Array); i++ {
+			// fmt.Printf("Waiting for %d\n", i)
+			s := <-secretChan
+			secretSlice = append(secretSlice, s)
 		}
+
+		// fmt.Println(secretSlice)
+
+// func (c *Cluster) GetSecrets(secrets []string, cipherKey string, secretChan chan<- Secret, qsize int) {
+		// // Get all secrets, add them to the files array
+		// for _, secretID := range secrets.Array {
+		// 	fmt.Printf("Getting secret '%s'\n", secretID)
+		// 	// secretValue, err := cluster.Get("/secrets/v1/secret/default/" + secretPath)
+		// 	secretJSON, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/"+secretID, nil)
+		// 	if err != nil || returnCode != http.StatusOK {
+		// 		fmt.Println("TODO: error handling here")
+		// 		panic(err)
+		// 	}
+
+		// 	e := encrypt(string(secretJSON), cipherkey)
+		// 	secretSlice = append(secretSlice, Secret{ID: secretID, EncryptedJSON: e})
+		// }
 
 		fmt.Println("Writing to tar at " + destfile)
 		writeTar(secretSlice, destfile)
