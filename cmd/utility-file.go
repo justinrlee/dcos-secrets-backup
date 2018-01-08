@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
+	// "path/filepath"
 
 	"archive/tar"
 	"bytes"
@@ -163,11 +163,11 @@ func readTar(filename string) (files []Secret){
 	return files
 }
 
-func createDirFor(path string) {
-	dir := filepath.Dir(path)
-	// fmt.Println(dir)
-	os.MkdirAll(dir, os.ModePerm)
-}
+// func createDirFor(path string) {
+// 	dir := filepath.Dir(path)
+// 	// fmt.Println(dir)
+// 	os.MkdirAll(dir, os.ModePerm)
+// }
 
 func validateCipher() {
 	if cipherkey == "" {

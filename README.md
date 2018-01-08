@@ -44,3 +44,7 @@ This is a minimal viable product / work in progress.  It works, but it has sever
 * If you try to restore with invalid/non-matching cipherkey, I *think* it will fail but I haven't put any actual checks in there (it fails because it's trying to post something that isn't actual JSON and saying it's JSON).
 * There is minimal error checking throughout.
 * Very minimal testing has occurred.  Try on a non-prod cluster.
+
+## Todo:
+Add certificate verification
+Parallelize processing

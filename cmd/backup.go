@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"encoding/json"
+	"net/http"
 
 	"github.com/spf13/cobra"
 )
@@ -34,8 +35,11 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// fmt.Println("backup called")
 		validateCipher()
+		if (destfile == "secrets.tar" && sourcefile != "secrets.tar") {
+			fmt.Println("You specified a source file in a backup command.  Did you mean to specify a destination file?")
+			os.Exit(1)
+		}
 
 		cluster, err := NewCluster(hostname, username, password)
 		if err != nil {
@@ -43,8 +47,9 @@ to quickly create a Cobra application.`,
 			os.Exit(1)
 		}
 
-		b, err := cluster.Get("/secrets/v1/secret/default/?list=true")
-		if err != nil {
+		// secretList, err := cluster.Get("/secrets/v1/secret/default/?list=true")
+		secretList, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/?list=true", nil)
+		if (err != nil ||  returnCode != http.StatusOK) {
 			fmt.Println("Unable to obtain list of secrets")
 			os.Exit(1)
 		}
@@ -53,25 +58,26 @@ to quickly create a Cobra application.`,
 			Array []string `json:array`
 		}
 
-		json.Unmarshal(b, &secrets)
+		json.Unmarshal(secretList, &secrets)
 
-		files := []Secret {}
+		secretSlice := []Secret {}
 
 		// Get all secrets, add them to the files array
-		for _, secretPath := range secrets.Array {
-			fmt.Printf("Getting secret '%s'\n", secretPath)
-			secretValue, err := cluster.Get("/secrets/v1/secret/default/" + secretPath)
-			if err != nil {
+		for _, secretID := range secrets.Array {
+			fmt.Printf("Getting secret '%s'\n", secretID)
+			// secretValue, err := cluster.Get("/secrets/v1/secret/default/" + secretPath)
+			secretJSON, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/" + secretID, nil)
+			if (err != nil ||  returnCode != http.StatusOK) {
 				fmt.Println("TODO: error handling here")
 				panic(err)
 			}
 
-			e := encrypt(string(secretValue), cipherkey)
-			files = append(files, Secret{ID: secretPath, EncryptedJSON: e})
+			e := encrypt(string(secretJSON), cipherkey)
+			secretSlice = append(secretSlice, Secret{ID: secretID, EncryptedJSON: e})
 		}
 
 		fmt.Println("Writing to tar at " + destfile)
-		writeTar(files, destfile)
+		writeTar(secretSlice, destfile)
 
 		os.Exit(0)
 

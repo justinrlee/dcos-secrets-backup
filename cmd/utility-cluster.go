@@ -22,11 +22,10 @@ type Cluster struct{
 	user User
 }
 
-// File >> Secret
+// Consists of the path to the secret ("ID") and the AES-encrypted JSON definition.  
+//JSON format is dependent on DC/OS version, but generally will have a 'value' field.
 type Secret struct {
 	ID, EncryptedJSON string
-	// Path >> ID
-	// Body > EncryptedJSON
 }
 
 func createClient() *http.Client {
@@ -99,34 +98,6 @@ func (c *Cluster) Login(path string, buf []byte) (err error) {
 	return err
 }
 
-func (c *Cluster) Get(path string) (body []byte, err error) {
-	url := c.cluster_url + path
-	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "token=" + string(c.user.Token))
-
-	resp, err	:= c.client.Do(req)
-
-	if err != nil {
-		fmt.Println("TODO: error handling here")
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("TODO: error handling here")
-		return nil, err
-	}
-
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("TODO: error handling here")
-		return nil, err
-	}
-
-	return body, nil
-}
-
 // Basic wrapper that includes specifying the auth token
 func (c *Cluster) Call(verb string, path string, buf []byte) (body []byte, returnCode int, err error) {
 	url := c.cluster_url + path
@@ -146,63 +117,3 @@ func (c *Cluster) Call(verb string, path string, buf []byte) (body []byte, retur
 
 	return body, resp.StatusCode, err
 }
-
-// func (c *Cluster) Patch(path string, buf []byte) (body []byte, returnCode int, err error) {
-// 	url := c.cluster_url + path
-// 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(buf))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	req.Header.Set("Authorization", "token=" + string(c.user.Token))
-
-// 	resp, err	:= c.client.Do(req)
-
-// 	if err != nil {
-// 		fmt.Println("TODO: error handling here3")
-// 		return nil, 0, err
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != http.StatusOK {
-// 		fmt.Println("TODO: error handling here6")
-// 		fmt.Println(resp.StatusCode)
-// 		fmt.Println(resp)
-// 		return nil, resp.StatusCode, err
-// 	}
-
-// 	body, _ = ioutil.ReadAll(resp.Body)
-
-// 	err = json.Unmarshal(body, &c.user)
-// 	fmt.Println(c.user)
-// 	// fmt.Println(body)
-
-// 	return body, resp.StatusCode, nil
-// }
-
-// func (c *Cluster) Put(path string, buf []byte) (body []byte, returnCode int, err error) {
-// 	url := c.cluster_url + path
-// 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(buf))
-// 	req.Header.Set("Content-Type", "application/json")
-// 	req.Header.Set("Authorization", "token=" + string(c.user.Token))
-
-// 	resp, err	:= c.client.Do(req)
-
-// 	if err != nil {
-// 		fmt.Println("TODO: error handling here5")
-// 		return nil, 0, err
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != http.StatusOK {
-// 		fmt.Println("TODO: error handling here6")
-// 		fmt.Println(resp.StatusCode)
-// 		fmt.Println(resp)
-// 		return nil, resp.StatusCode, err
-// 	}
-
-// 	body, _ = ioutil.ReadAll(resp.Body)
-
-// 	err = json.Unmarshal(body, &c.user)
-// 	fmt.Println(c.user)
-// 	// fmt.Println(body)
-
-// 	return body, resp.StatusCode, nil
-// }
