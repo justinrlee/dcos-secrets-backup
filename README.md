@@ -46,5 +46,5 @@ This is a minimal viable product / work in progress.  It works, but it has sever
 * Very minimal testing has occurred.  Try on a non-prod cluster.
 
 ## Todo:
-Add certificate verification
-Parallelize processing
+* Add certificate verification
+* Parallelize processing
