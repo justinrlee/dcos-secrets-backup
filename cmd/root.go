@@ -35,7 +35,7 @@ var sourcefile string
 var rootCmd = &cobra.Command{
 	Use:   "dcos-secrets-backup",
 	Short: "Backup and restore all secrets from a DC/OS cluster",
-	Long: `Backup and restore all secrets from a DC/OS cluster.`,
+	Long:  `Backup and restore all secrets from a DC/OS cluster.`,
 	//	Run: func(cmd *cobra.Command, args []string) { },
 }
 

@@ -1,29 +1,29 @@
 package cmd
 
 import (
-	"fmt"
-	"net/http"
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"io/ioutil"
-	"bytes"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 )
 
-type User struct{
-	Username	string	`json:"uid"`
-	Password	string	`json:"password"`
-	Token	string	`json:"token,omitempty"`
+type User struct {
+	Username string `json:"uid"`
+	Password string `json:"password"`
+	Token    string `json:"token,omitempty"`
 }
 
-type Cluster struct{
+type Cluster struct {
 	cluster_url string
-	client *http.Client
-	user User
+	client      *http.Client
+	user        User
 }
 
-// Consists of the path to the secret ("ID") and the AES-encrypted JSON definition.  
-//JSON format is dependent on DC/OS version, but generally will have a 'value' field.
+// Consists of the path to the secret ("ID") and the AES-encrypted JSON definition.
+// JSON format is dependent on DC/OS version, but generally will have a 'value' field.
 type Secret struct {
 	ID, EncryptedJSON string
 }
@@ -34,7 +34,7 @@ func createClient() *http.Client {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	client	:= &http.Client{
+	client := &http.Client{
 		Transport: tr,
 	} // TODO: add timeouts here
 
@@ -42,12 +42,12 @@ func createClient() *http.Client {
 }
 
 func NewCluster(hostname string, username string, password string) (cluster *Cluster, err error) {
-	if (hostname == "" || username == "" || password == "") {
+	if hostname == "" || username == "" || password == "" {
 		fmt.Println("Please provide hostname, username, and password")
 		return nil, errors.New("")
 	}
 	var c Cluster
-	c.cluster_url	= "https://" + hostname
+	c.cluster_url = "https://" + hostname
 	c.user = User{Username: username, Password: password}
 
 	// Create JSON to login
@@ -73,7 +73,7 @@ func (c *Cluster) Login(path string, buf []byte) (err error) {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err	:= c.client.Do(req)
+	resp, err := c.client.Do(req)
 
 	if err != nil {
 		fmt.Println("TODO: error handling here utility-cluster Login1")
@@ -103,9 +103,9 @@ func (c *Cluster) Call(verb string, path string, buf []byte) (body []byte, retur
 	url := c.cluster_url + path
 	req, err := http.NewRequest(verb, url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "token=" + string(c.user.Token))
+	req.Header.Set("Authorization", "token="+string(c.user.Token))
 
-	resp, err	:= c.client.Do(req)
+	resp, err := c.client.Do(req)
 
 	if err != nil {
 		fmt.Println("TODO: error handling here: request failed")

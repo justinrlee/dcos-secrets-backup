@@ -15,14 +15,13 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/spf13/cobra"
 )
-
 
 // backupCmd represents the backup command
 var backupCmd = &cobra.Command{
@@ -36,7 +35,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		validateCipher()
-		if (destfile == "secrets.tar" && sourcefile != "secrets.tar") {
+		if destfile == "secrets.tar" && sourcefile != "secrets.tar" {
 			fmt.Println("You specified a source file in a backup command.  Did you mean to specify a destination file?")
 			os.Exit(1)
 		}
@@ -49,25 +48,25 @@ to quickly create a Cobra application.`,
 
 		// secretList, err := cluster.Get("/secrets/v1/secret/default/?list=true")
 		secretList, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/?list=true", nil)
-		if (err != nil ||  returnCode != http.StatusOK) {
+		if err != nil || returnCode != http.StatusOK {
 			fmt.Println("Unable to obtain list of secrets")
 			os.Exit(1)
 		}
 
-		var secrets struct{
+		var secrets struct {
 			Array []string `json:array`
 		}
 
 		json.Unmarshal(secretList, &secrets)
 
-		secretSlice := []Secret {}
+		secretSlice := []Secret{}
 
 		// Get all secrets, add them to the files array
 		for _, secretID := range secrets.Array {
 			fmt.Printf("Getting secret '%s'\n", secretID)
 			// secretValue, err := cluster.Get("/secrets/v1/secret/default/" + secretPath)
-			secretJSON, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/" + secretID, nil)
-			if (err != nil ||  returnCode != http.StatusOK) {
+			secretJSON, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/"+secretID, nil)
+			if err != nil || returnCode != http.StatusOK {
 				fmt.Println("TODO: error handling here")
 				panic(err)
 			}

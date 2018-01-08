@@ -15,9 +15,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-	"encoding/json"
 
 	"github.com/spf13/cobra"
 )
@@ -34,7 +34,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		validateCipher()
-		if (destfile != "secrets.tar" && sourcefile == "secrets.tar") {
+		if destfile != "secrets.tar" && sourcefile == "secrets.tar" {
 			fmt.Println("You specified a destination file in a restore command.  Did you mean to specify a source file?")
 			os.Exit(1)
 		}
@@ -50,18 +50,18 @@ to quickly create a Cobra application.`,
 			plaintext := decrypt(item.EncryptedJSON, cipherkey)
 
 			// Prior to restore, will try to unmarshal.  If unable to unmarshal, we have invalid cipherkey.
-			var t struct{
+			var t struct {
 				Value string `json:"value"`
 			}
 			err := json.Unmarshal([]byte(plaintext), &t)
-			if (err != nil || t.Value == "")  {
+			if err != nil || t.Value == "" {
 				fmt.Println("Unable to decrypt.  You likely have an invalid cipherkey.")
 				os.Exit(1)
 			}
 
 			fmt.Printf("Processing [%s] ...\n", item.ID)
 			secretPath := "/secrets/v1/secret/default/" + item.ID
-			
+
 			resp, code, err := cluster.Call("PUT", secretPath, []byte(plaintext))
 			if code == 201 {
 				fmt.Println("Secret" + item.ID + "successfully created.")

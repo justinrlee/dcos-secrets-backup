@@ -103,7 +103,7 @@ func encrypt(plainstring, keystring string) string {
 // 	return data, err
 // }
 
-func writeTar(files []Secret, filename string){
+func writeTar(files []Secret, filename string) {
 	f, err := os.Create(filename)
 	if err != nil {
 		panic(err)
@@ -135,7 +135,7 @@ func writeTar(files []Secret, filename string){
 	}
 }
 
-func readTar(filename string) (files []Secret){
+func readTar(filename string) (files []Secret) {
 	files = []Secret{}
 	f, err := os.Open(filename)
 	if err != nil {
