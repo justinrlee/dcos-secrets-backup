@@ -135,8 +135,8 @@ func writeTar(files []Secret, filename string) {
 	}
 }
 
-func readTar(filename string) (files []Secret) {
-	files = []Secret{}
+func readTar(filename string) (secrets []Secret) {
+	secrets = []Secret{}
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -158,9 +158,9 @@ func readTar(filename string) (files []Secret) {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(tr)
 		s := buf.String()
-		files = append(files, Secret{ID: hdr.Name, EncryptedJSON: s})
+		secrets = append(secrets, Secret{ID: hdr.Name, EncryptedJSON: s})
 	}
-	return files
+	return secrets
 }
 
 // func createDirFor(path string) {
