@@ -47,4 +47,3 @@ This is a minimal viable product / work in progress.  It works, but it has sever
 
 ## Todo:
 * Add certificate verification
-* Parallelize processing
