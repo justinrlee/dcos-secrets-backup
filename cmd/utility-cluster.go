@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"os"
 )
 
@@ -26,7 +27,9 @@ type Cluster struct {
 // Consists of the path to the secret ("ID") and the AES-encrypted JSON definition.
 // JSON format is dependent on DC/OS version, but generally will have a 'value' field.
 type Secret struct {
-	ID, EncryptedJSON string
+	ID string
+	EncryptedContent []byte
+	// binary bool
 }
 
 func createClient() *http.Client {
@@ -100,47 +103,55 @@ func (c *Cluster) Login(path string, buf []byte) (err error) {
 }
 
 // Basic wrapper that includes specifying the auth token
-func (c *Cluster) Call(verb string, path string, buf []byte) (body []byte, returnCode int, err error) {
+func (c *Cluster) Call(verb string, path string, headers map[string]string, buf []byte) (body []byte, returnCode int, header http.Header, err error) {
 	url := c.cluster_url + path
 	req, err := http.NewRequest(verb, url, bytes.NewBuffer(buf))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "token="+string(c.user.Token))
 
+	// Add all headers
+	for h, v := range headers {
+		req.Header.Set(h, v)
+	}
+
 	resp, err := c.client.Do(req)
 
 	if err != nil {
 		fmt.Println("TODO: error handling here: request failed")
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	defer resp.Body.Close()
 
 	body, err = ioutil.ReadAll(resp.Body)
 
-	return body, resp.StatusCode, err
+	return body, resp.StatusCode, resp.Header, err
 }
 
 // Get secret
 func (c *Cluster) GetSecret(secretID string, cipherKey string, pool chan int, secretChan chan<- Secret) {
-		<- pool // Wait for there to be an open spot in the queue
+		<- pool // Wait for there to be an open spot in the pool
 		defer func() {
 			pool <- 0
 		}()
 
 		fmt.Printf("Getting secret '%s'\n", secretID)
-		secretJSON, returnCode, err := c.Call("GET", "/secrets/v1/secret/default/"+secretID, nil)
+		secretBody, returnCode, headers, err := c.Call("GET", "/secrets/v1/secret/default/"+secretID, nil, nil)
 		if err != nil || returnCode != http.StatusOK {
-			fmt.Println("Unable to retrieve secret '%s'\n. [%d]: %s", secretID, returnCode, err.Error)
-			secretChan <- Secret{ID: "", EncryptedJSON: ""}
+			fmt.Printf("Unable to retrieve secret '%s'\n. [%d]: %s", secretID, returnCode, err.Error)
+			secretChan <- Secret{ID: ""}
 		} else {
-			e := encrypt(string(secretJSON), cipherKey)
-			secretChan <- Secret{ID: secretID, EncryptedJSON: e}
+			if headers.Get("content-type") == "application/octet-stream" {
+				secretID = secretID+".binary"
+			}
+			var econtent []byte
+			econtent = encrypt(secretBody, cipherKey)
+			secretChan <- Secret{ID: secretID, EncryptedContent: econtent}
 		}
 }
 
 func (c *Cluster) GetSecrets(secrets []string, cipherKey string, secretChan chan Secret, psize int) {
 	pool := make(chan int, psize)
 	for i:= 0; i < psize; i++ {
-		// fmt.Println("Writing 0 to queue")
 		pool <- 0
 	}
 	// Spins off a bunch of goroutines to get secrets and add them to secretChan.  Should be rate limited by psize
@@ -153,19 +164,29 @@ func (c *Cluster) GetSecrets(secrets []string, cipherKey string, secretChan chan
 func (c * Cluster) PushSecret(secret Secret, cipherKey string, pool chan int, rchan chan<- int) {
 	
 	// We don't really need to throttle decryption / unmarshalling
-	plaintext := decrypt(secret.EncryptedJSON, cipherkey)
+	var content []byte
+	content = decrypt(secret.EncryptedContent, cipherkey)
 
-	var t struct {
-		Value string `json:"value"`
-	}
-	err := json.Unmarshal([]byte(plaintext), &t)
-	if err != nil || t.Value == "" {
-		fmt.Printf("Unable to decrypt [%s].  You likely have an invalid cipherkey.\n", secret.ID)
-		os.Exit(1)
+	binary := strings.HasSuffix(secret.ID, ".binary")
+	headers := make(map[string]string)
+
+	if binary {
+		headers["content-type"] = "application/octet-stream"
+	} else {
+		// Can probably remove this - this has been superceded by the cipherkey validation
+		var t struct {
+			Value string `json:"value"`
+		}
+		err := json.Unmarshal(content, &t)
+		if err != nil || t.Value == "" {
+			fmt.Printf("Unable to decrypt [%s].  You likely have an invalid cipherkey.\n", secret.ID)
+			os.Exit(1)
+		}
 	}
 
-	fmt.Printf("Queueing secret [%s] ...\n", secret.ID)
-	secretPath := "/secrets/v1/secret/default/" + secret.ID
+	secretID := strings.TrimSuffix(secret.ID, ".binary")
+	fmt.Printf("Queueing secret [%s] ...\n", secretID)
+	secretPath := "/secrets/v1/secret/default/" + secretID
 
 	<- pool // throttle
 	defer func() {
@@ -173,24 +194,22 @@ func (c * Cluster) PushSecret(secret Secret, cipherKey string, pool chan int, rc
 		rchan <- 0
 	}()
 
-	resp, code, err := c.Call("PUT", secretPath, []byte(plaintext))
+	resp, code, _, err := c.Call("PUT", secretPath, headers, content)
 	if code == 201 {
-		fmt.Println("Secret [" + secret.ID + "] successfully created.")
+		fmt.Println("Secret [" + secretID + "] successfully created.")
 	} else if code == 409 {
 		// fmt.Printf("[%s] already exists, updating ...\n", secret.ID)
-		presp, pcode, perr := c.Call("PATCH", secretPath, []byte(plaintext))
+		presp, pcode, _, perr := c.Call("PATCH", secretPath, headers, content)
 		if pcode == 204 {
-			fmt.Println("Secret [" + secret.ID + "] successfully updated.")
+			fmt.Println("Secret [" + secretID + "] successfully updated.")
 		} else if perr != nil {
-			fmt.Printf("Error when attempting to update [%s]: %s\n", secret.ID, perr.Error())
+			fmt.Printf("Error when attempting to update [%s]: %s\n", secretID, perr.Error())
 		} else {
-			fmt.Printf("Error when attempting to update [%s]. [%s]: %s\n", secret.ID, pcode, string(presp))
+			fmt.Printf("Error when attempting to update [%s]. [%s]: %s\n", secretID, pcode, string(presp))
 		}
 	} else if err != nil {
-		fmt.Printf("Error when attempting to create [%s]: %s\n", secret.ID, err.Error())
+		fmt.Printf("Error when attempting to create [%s]: %s\n", secretID, err.Error())
 	} else {
-		fmt.Printf("Error when attempting to create [%s]. [%s]: %s\n", secret.ID, code, string(resp))
+		fmt.Printf("Error when attempting to create [%s]. [%s]: %s\n", secretID, code, string(resp))
 	}
-
-
 }

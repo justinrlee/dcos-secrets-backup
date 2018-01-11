@@ -47,7 +47,7 @@ to quickly create a Cobra application.`,
 		}
 
 		// secretList, err := cluster.Get("/secrets/v1/secret/default/?list=true")
-		secretList, returnCode, err := cluster.Call("GET", "/secrets/v1/secret/default/?list=true", nil)
+		secretList, returnCode, _, err := cluster.Call("GET", "/secrets/v1/secret/default/?list=true", nil, nil)
 		if err != nil || returnCode != http.StatusOK {
 			fmt.Println("Unable to obtain list of secrets")
 			os.Exit(1)
@@ -59,18 +59,19 @@ to quickly create a Cobra application.`,
 
 		json.Unmarshal(secretList, &secrets)
 
-		secretSlice := []Secret{}
+		// First item in tar is used to validate the cipherkey is correct.
+		secretSlice := []Secret{Secret{ID: ".sanity", EncryptedContent: encrypt([]byte("sanity check string"), cipherkey)}}
 
 		secretChan := make(chan Secret)
 
 		// fmt.Println("Calling go GetSecrets")
 		go cluster.GetSecrets(secrets.Array, cipherkey, secretChan, concurrency)
 
-		// fmt.Println("Starting to receive")
 		for i := 0; i < len(secrets.Array); i++ {
-			// fmt.Printf("Waiting for %d\n", i)
 			s := <-secretChan
-			secretSlice = append(secretSlice, s)
+			if s.ID != "" {
+				secretSlice = append(secretSlice, s)
+			}
 		}
 
 		fmt.Println("Writing to tar at " + destfile)

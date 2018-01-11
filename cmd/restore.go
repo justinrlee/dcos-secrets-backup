@@ -54,6 +54,16 @@ to quickly create a Cobra application.`,
 			pool <- 0
 		}
 
+		if secrets[0].ID == ".sanity" {
+			fmt.Println("Validating cipherkey...")
+			if string(decrypt(secrets[0].EncryptedContent, cipherkey)) != "sanity check string" {
+				fmt.Println("Sanity check failed.  You likely have an invalid cipher key.")
+				os.Exit(1)
+			}
+			fmt.Println("Sanity check passed!")
+			secrets = secrets[1:]
+		}
+
 		for _, secret := range secrets {
 			go cluster.PushSecret(secret, cipherkey, pool, rchan)
 		}
