@@ -16,10 +16,8 @@ import (
 	"bytes"
 )
 
-func decrypt(cipherstring string, keystring string) string {
-	// Byte array of the string
-	ciphertext := []byte(cipherstring)
-
+// TODO: Support variable length keystring
+func decrypt(data []byte, keystring string) []byte {
 	// Key
 	key := []byte(keystring)
 
@@ -31,29 +29,27 @@ func decrypt(cipherstring string, keystring string) string {
 
 	// Before even testing the decryption,
 	// if the text is too small, then it is incorrect
-	if len(ciphertext) < aes.BlockSize {
+	if len(data) < aes.BlockSize {
 		panic("Text is too short")
 	}
 
 	// Get the 16 byte IV
-	iv := ciphertext[:aes.BlockSize]
+	iv := data[:aes.BlockSize]
 
-	// Remove the IV from the ciphertext
-	ciphertext = ciphertext[aes.BlockSize:]
+	// Remove the IV from the data
+	data = data[aes.BlockSize:]
 
 	// Return a decrypted stream
 	stream := cipher.NewCFBDecrypter(block, iv)
 
-	// Decrypt bytes from ciphertext
-	stream.XORKeyStream(ciphertext, ciphertext)
+	// Decrypt bytes from data
+	stream.XORKeyStream(data, data)
 
-	return string(ciphertext)
+	return data
 }
 
-func encrypt(plainstring, keystring string) string {
-	// Byte array of the string
-	plaintext := []byte(plainstring)
-
+// TODO: Support variable length keystring
+func encrypt(data []byte, keystring string) []byte {
 	// Key
 	key := []byte(keystring)
 
@@ -63,9 +59,9 @@ func encrypt(plainstring, keystring string) string {
 		panic(err)
 	}
 
-	// Empty array of 16 + plaintext length
+	// Empty array of 16 + data length
 	// Include the IV at the beginning
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
+	ciphertext := make([]byte, aes.BlockSize+len(data))
 
 	// Slice of first 16 bytes
 	iv := ciphertext[:aes.BlockSize]
@@ -78,32 +74,13 @@ func encrypt(plainstring, keystring string) string {
 	// Return an encrypted stream
 	stream := cipher.NewCFBEncrypter(block, iv)
 
-	// Encrypt bytes from plaintext to ciphertext
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
+	// Encrypt bytes from data to ciphertext
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], data)
 
-	return string(ciphertext)
+	return ciphertext
 }
 
-// Unused, for now.
-// func readline() string {
-// 	bio := bufio.NewReader(os.Stdin)
-// 	line, _, err := bio.ReadLine()
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	return string(line)
-// }
-// 
-// func writeToFile(data, file string) {
-// 	ioutil.WriteFile(file, []byte(data), 777)
-// }
-
-// func readFromFile(file string) ([]byte, error) {
-// 	data, err := ioutil.ReadFile(file)
-// 	return data, err
-// }
-
-func writeTar(files []Secret, filename string) {
+func writeTar(secrets []Secret, filename string) {
 	f, err := os.Create(filename)
 	if err != nil {
 		panic(err)
@@ -113,17 +90,17 @@ func writeTar(files []Secret, filename string) {
 	// Create a new tar archive.
 	tw := tar.NewWriter(f)
 
-	for _, file := range files {
+	for _, secret := range secrets {
 		hdr := &tar.Header{
-			Name: file.ID,
+			Name: secret.ID,
 			Mode: 0600,
-			Size: int64(len(file.EncryptedJSON)),
+			Size: int64(len(secret.EncryptedContent)),
 		}
 		if err := tw.WriteHeader(hdr); err != nil {
 			fmt.Println("Error writing header")
 			// log.Fatalln(err)
 		}
-		if _, err := tw.Write([]byte(file.EncryptedJSON)); err != nil {
+		if _, err := tw.Write((secret.EncryptedContent)); err != nil {
 			fmt.Println("Error writing content")
 			// log.Fatalln(err)
 		}
@@ -157,8 +134,8 @@ func readTar(filename string) (secrets []Secret) {
 		}
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(tr)
-		s := buf.String()
-		secrets = append(secrets, Secret{ID: hdr.Name, EncryptedJSON: s})
+		s := buf.Bytes()
+		secrets = append(secrets, Secret{ID: hdr.Name, EncryptedContent: s})
 	}
 	return secrets
 }
