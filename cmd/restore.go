@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"encoding/json"
 
 	"github.com/spf13/cobra"
 )
@@ -34,7 +33,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		validateCipher()
-		if (destfile != "secrets.tar" && sourcefile == "secrets.tar") {
+		if destfile != "secrets.tar" && sourcefile == "secrets.tar" {
 			fmt.Println("You specified a destination file in a restore command.  Did you mean to specify a source file?")
 			os.Exit(1)
 		}
@@ -45,45 +44,23 @@ to quickly create a Cobra application.`,
 			os.Exit(1)
 		}
 
-		secrets := readTar(sourcefile)
-		for _, item := range secrets {
-			plaintext := decrypt(item.EncryptedJSON, cipherkey)
+		secrets := readTar(sourcefile) // secrets []Secret
 
-			// Prior to restore, will try to unmarshal.  If unable to unmarshal, we have invalid cipherkey.
-			var t struct{
-				Value string `json:"value"`
-			}
-			err := json.Unmarshal([]byte(plaintext), &t)
-			if (err != nil || t.Value == "")  {
-				fmt.Println("Unable to decrypt.  You likely have an invalid cipherkey.")
-				os.Exit(1)
-			}
+		rchan := make(chan int) // Used to wait till done
 
-			fmt.Printf("Processing [%s] ...\n", item.ID)
-			secretPath := "/secrets/v1/secret/default/" + item.ID
-			
-			resp, code, err := cluster.Call("PUT", secretPath, []byte(plaintext))
-			if code == 201 {
-				fmt.Println("Secret" + item.ID + "successfully created.")
-			} else if code == 409 {
-				presp, pcode, perr := cluster.Call("PATCH", secretPath, []byte(plaintext))
-				if pcode == 204 {
-					fmt.Println("Secret [" + item.ID + "] successfully updated.")
-				} else if perr != nil {
-					fmt.Println("Error:")
-					fmt.Println(perr)
-				} else {
-					fmt.Println(string(presp))
-					fmt.Println(pcode)
-				}
-			} else if err != nil {
-				fmt.Println("Error:")
-				fmt.Println(err)
-			} else {
-				fmt.Println("Something else happened:")
-				fmt.Printf("HTTP %s: %s\n", code, string(resp))
-				fmt.Println(err)
-			}
+		// Populate connection pool
+		pool := make(chan int, concurrency)
+		for i:= 0; i < concurrency; i++ {
+			pool <- 0
+		}
+
+		for _, secret := range secrets {
+			go cluster.PushSecret(secret, cipherkey, pool, rchan)
+		}
+
+		// Wait for all secrets to be processed before quitting
+		for i := 0; i < len(secrets); i++ {
+			<- rchan
 		}
 	},
 }
