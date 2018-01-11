@@ -50,7 +50,7 @@ to quickly create a Cobra application.`,
 
 		// Populate connection pool
 		pool := make(chan int, concurrency)
-		for i:= 0; i < concurrency; i++ {
+		for i := 0; i < concurrency; i++ {
 			pool <- 0
 		}
 
@@ -70,7 +70,7 @@ to quickly create a Cobra application.`,
 
 		// Wait for all secrets to be processed before quitting
 		for i := 0; i < len(secrets); i++ {
-			<- rchan
+			<-rchan
 		}
 	},
 }

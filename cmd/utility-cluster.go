@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"os"
+	"strings"
 )
 
 type User struct {
@@ -27,7 +27,7 @@ type Cluster struct {
 // Consists of the path to the secret ("ID") and the AES-encrypted JSON definition.
 // JSON format is dependent on DC/OS version, but generally will have a 'value' field.
 type Secret struct {
-	ID string
+	ID               string
 	EncryptedContent []byte
 	// binary bool
 }
@@ -129,29 +129,29 @@ func (c *Cluster) Call(verb string, path string, headers map[string]string, buf 
 
 // Get secret
 func (c *Cluster) GetSecret(secretID string, cipherKey string, pool chan int, secretChan chan<- Secret) {
-		<- pool // Wait for there to be an open spot in the pool
-		defer func() {
-			pool <- 0
-		}()
+	<-pool // Wait for there to be an open spot in the pool
+	defer func() {
+		pool <- 0
+	}()
 
-		fmt.Printf("Getting secret '%s'\n", secretID)
-		secretBody, returnCode, headers, err := c.Call("GET", "/secrets/v1/secret/default/"+secretID, nil, nil)
-		if err != nil || returnCode != http.StatusOK {
-			fmt.Printf("Unable to retrieve secret '%s'\n. [%d]: %s", secretID, returnCode, err.Error)
-			secretChan <- Secret{ID: ""}
-		} else {
-			if headers.Get("content-type") == "application/octet-stream" {
-				secretID = secretID+".binary"
-			}
-			var econtent []byte
-			econtent = encrypt(secretBody, cipherKey)
-			secretChan <- Secret{ID: secretID, EncryptedContent: econtent}
+	fmt.Printf("Getting secret '%s'\n", secretID)
+	secretBody, returnCode, headers, err := c.Call("GET", "/secrets/v1/secret/default/"+secretID, nil, nil)
+	if err != nil || returnCode != http.StatusOK {
+		fmt.Printf("Unable to retrieve secret '%s'\n. [%d]: %s", secretID, returnCode, err.Error)
+		secretChan <- Secret{ID: ""}
+	} else {
+		if headers.Get("content-type") == "application/octet-stream" {
+			secretID = secretID + ".binary"
 		}
+		var econtent []byte
+		econtent = encrypt(secretBody, cipherKey)
+		secretChan <- Secret{ID: secretID, EncryptedContent: econtent}
+	}
 }
 
 func (c *Cluster) GetSecrets(secrets []string, cipherKey string, secretChan chan Secret, psize int) {
 	pool := make(chan int, psize)
-	for i:= 0; i < psize; i++ {
+	for i := 0; i < psize; i++ {
 		pool <- 0
 	}
 	// Spins off a bunch of goroutines to get secrets and add them to secretChan.  Should be rate limited by psize
@@ -161,8 +161,7 @@ func (c *Cluster) GetSecrets(secrets []string, cipherKey string, secretChan chan
 }
 
 // Will attempt to PUT; if it gets a 409 back (i.e., a 'conflict'), will then attempt a PATCH
-func (c * Cluster) PushSecret(secret Secret, cipherKey string, pool chan int, rchan chan<- int) {
-	
+func (c *Cluster) PushSecret(secret Secret, cipherKey string, pool chan int, rchan chan<- int) {
 	// We don't really need to throttle decryption / unmarshalling
 	var content []byte
 	content = decrypt(secret.EncryptedContent, cipherkey)
@@ -188,7 +187,7 @@ func (c * Cluster) PushSecret(secret Secret, cipherKey string, pool chan int, rc
 	fmt.Printf("Queueing secret [%s] ...\n", secretID)
 	secretPath := "/secrets/v1/secret/default/" + secretID
 
-	<- pool // throttle
+	<-pool // throttle
 	defer func() {
 		pool <- 0
 		rchan <- 0
